@@ -84,3 +84,7 @@ server {
 ```
 
 From the browser you would then connect to `ws://yampa.example.com/ws` (or `wss://...` if served over TLS).
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPLv3). See [LICENSE](LICENSE).
