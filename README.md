@@ -2,6 +2,8 @@
 
 # YAMPA
 
+![YAMPA packet analyzer](screenshots/main.png)
+
 YAMPA is a Meshcore packet visualizer.
 
 This repository contains:
@@ -84,6 +86,16 @@ server {
 ```
 
 From the browser you would then connect to `ws://yampa.example.com/ws` (or `wss://...` if served over TLS).
+
+## Screenshots
+
+### Channels
+
+![YAMPA channels view](screenshots/channel-view.png)
+
+### Map
+
+![YAMPA map view](screenshots/map-view.png)
 
 ## License
 
