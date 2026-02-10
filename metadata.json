@@ -1,0 +1,5 @@
+{
+  "name": "YAMPA",
+  "description": "Yet Another Meshcore Packet Analyser - Real-time visualization interface for Meshcore network packets, featuring live feed, packet decoding, and signal statistics.",
+  "requestFramePermissions": []
+}
