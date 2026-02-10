@@ -19,10 +19,14 @@ export const PacketRow: React.FC<PacketRowProps> = ({ packet, onClick, isSelecte
 
   const getIcon = () => {
     switch (typeName) {
-      case 'GRP_TXT': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
-      case 'TXT_MSG': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
-      case 'ADVERT': return <MapPin className="w-4 h-4 text-blue-400" />;
-      case 'RESPONSE': return <Share2 className="w-4 h-4 text-orange-400" />;
+      case 'GroupText': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
+      case 'TextMessage': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
+      case 'Advert': return <MapPin className="w-4 h-4 text-blue-400" />;
+      case 'Response': return <Share2 className="w-4 h-4 text-orange-400" />;
+      case 'Path': return <Radio className="w-4 h-4 text-purple-400" />;
+      case 'Request': return <HelpCircle className="w-4 h-4 text-yellow-400" />;
+      case 'Ack': return <HelpCircle className="w-4 h-4 text-gray-400" />;
+      case 'Trace': return <Radio className="w-4 h-4 text-indigo-400" />;
       default: return <HelpCircle className="w-4 h-4 text-slate-500" />;
     }
   };
@@ -55,7 +59,7 @@ export const PacketRow: React.FC<PacketRowProps> = ({ packet, onClick, isSelecte
       }
       return <span className="text-slate-500">Node Announcement</span>;
     }
-    if (packet.packet.payload_type_name === 'RESPONSE') {
+    if (packet.packet.payload_type_name === 'Response') {
        return <span className="text-slate-500 font-mono text-xs">{packet.payload.hex.substring(0, 16)}...</span>
     }
     // Updated to use formatPath
@@ -73,9 +77,14 @@ export const PacketRow: React.FC<PacketRowProps> = ({ packet, onClick, isSelecte
       <div className="col-span-2 flex items-center gap-2">
         {getIcon()}
         <span className={`font-medium ${
-          typeName === 'GRP_TXT' ? 'text-emerald-400' : 
-          typeName === 'ADVERT' ? 'text-blue-400' : 
-          typeName === 'RESPONSE' ? 'text-orange-400' : 'text-slate-400'
+          typeName === 'GroupText' ? 'text-emerald-400' : 
+          typeName === 'Advert' ? 'text-blue-400' : 
+          typeName === 'Response' ? 'text-orange-400' :
+          typeName === 'Path' ? 'text-purple-400' :
+          typeName === 'Request' ? 'text-yellow-400' :
+          typeName === 'Ack' ? 'text-gray-400' :
+          typeName === 'Trace' ? 'text-indigo-400' :
+          'text-slate-400'
         }`}>
           {typeName}
         </span>

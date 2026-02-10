@@ -1,6 +1,6 @@
 import React from 'react';
 import { Packet } from '../types';
-import { MessageSquare, MapPin, Share2, HelpCircle, Layers } from 'lucide-react';
+import { MessageSquare, MapPin, Share2, HelpCircle, Layers, Radio } from 'lucide-react';
 import { BarChart, Bar, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface HeaderStatsProps {
@@ -11,10 +11,14 @@ interface HeaderStatsProps {
 export const HeaderStats: React.FC<HeaderStatsProps> = ({ packets, totalPacketCount }) => {
   // Initialize with 0 for known types so they are always displayed
   const stats: Record<string, number> = {
-    'GRP_TXT': 0,
-    'TXT_MSG': 0,
-    'ADVERT': 0,
-    'RESPONSE': 0
+    'GroupText': 0,
+    'TextMessage': 0,
+    'Advert': 0,
+    'Response': 0,
+    'Path': 0,
+    'Request': 0,
+    'Ack': 0,
+    'Trace': 0
   };
 
   // Calculate counts from the current packet buffer
@@ -26,7 +30,7 @@ export const HeaderStats: React.FC<HeaderStatsProps> = ({ packets, totalPacketCo
   const data = Object.entries(stats).map(([name, value]) => ({ name, value }));
   
   // Sort data by order of known types to keep UI consistent
-  const knownTypesOrder = ['GRP_TXT', 'TXT_MSG', 'ADVERT', 'RESPONSE'];
+  const knownTypesOrder = ['GroupText', 'TextMessage', 'Advert', 'Response', 'Path', 'Request', 'Ack', 'Trace'];
   data.sort((a, b) => {
      const idxA = knownTypesOrder.indexOf(a.name);
      const idxB = knownTypesOrder.indexOf(b.name);
@@ -40,20 +44,28 @@ export const HeaderStats: React.FC<HeaderStatsProps> = ({ packets, totalPacketCo
 
   const getColor = (name: string) => {
     switch (name) {
-      case 'GRP_TXT':
-      case 'TXT_MSG': return '#34d399'; // emerald-400
-      case 'ADVERT': return '#60a5fa'; // blue-400
-      case 'RESPONSE': return '#fb923c'; // orange-400
+      case 'GroupText':
+      case 'TextMessage': return '#34d399'; // emerald-400
+      case 'Advert': return '#60a5fa'; // blue-400
+      case 'Response': return '#fb923c'; // orange-400
+      case 'Path': return '#a855f7'; // purple-400
+      case 'Request': return '#eab308'; // yellow-400
+      case 'Ack': return '#6b7280'; // gray-400
+      case 'Trace': return '#6366f1'; // indigo-400
       default: return '#64748b'; // slate-500
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'GRP_TXT':
-      case 'TXT_MSG': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
-      case 'ADVERT': return <MapPin className="w-4 h-4 text-blue-400" />;
-      case 'RESPONSE': return <Share2 className="w-4 h-4 text-orange-400" />;
+      case 'GroupText':
+      case 'TextMessage': return <MessageSquare className="w-4 h-4 text-emerald-400" />;
+      case 'Advert': return <MapPin className="w-4 h-4 text-blue-400" />;
+      case 'Response': return <Share2 className="w-4 h-4 text-orange-400" />;
+      case 'Path': return <Radio className="w-4 h-4 text-purple-400" />;
+      case 'Request': return <HelpCircle className="w-4 h-4 text-yellow-400" />;
+      case 'Ack': return <HelpCircle className="w-4 h-4 text-gray-400" />;
+      case 'Trace': return <Radio className="w-4 h-4 text-indigo-400" />;
       default: return <HelpCircle className="w-4 h-4 text-slate-500" />;
     }
   };

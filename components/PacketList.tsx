@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Packet } from '../types';
 import { PacketRow } from './PacketRow';
-import { MessageSquare, MapPin, Share2, HelpCircle, Layers, Filter } from 'lucide-react';
+import { MessageSquare, MapPin, Share2, HelpCircle, Layers, Filter, Radio } from 'lucide-react';
 
 interface PacketListProps {
   packets: Packet[];
@@ -15,10 +15,14 @@ export const PacketList: React.FC<PacketListProps> = ({ packets, onSelect, selec
   // Calculate stats based on ALL packets passed to this component
   const stats = useMemo(() => {
     const counts: Record<string, number> = {
-        'GRP_TXT': 0,
-        'TXT_MSG': 0,
-        'ADVERT': 0,
-        'RESPONSE': 0
+        'GroupText': 0,
+        'TextMessage': 0,
+        'Advert': 0,
+        'Response': 0,
+        'Path': 0,
+        'Request': 0,
+        'Ack': 0,
+        'Trace': 0
     };
     packets.forEach(p => {
         const type = p.packet.payload_type_name;
@@ -35,26 +39,34 @@ export const PacketList: React.FC<PacketListProps> = ({ packets, onSelect, selec
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'GRP_TXT':
-      case 'TXT_MSG': return <MessageSquare className="w-3.5 h-3.5" />;
-      case 'ADVERT': return <MapPin className="w-3.5 h-3.5" />;
-      case 'RESPONSE': return <Share2 className="w-3.5 h-3.5" />;
+      case 'GroupText':
+      case 'TextMessage': return <MessageSquare className="w-3.5 h-3.5" />;
+      case 'Advert': return <MapPin className="w-3.5 h-3.5" />;
+      case 'Response': return <Share2 className="w-3.5 h-3.5" />;
+      case 'Path': return <Radio className="w-3.5 h-3.5" />;
+      case 'Request': return <HelpCircle className="w-3.5 h-3.5" />;
+      case 'Ack': return <HelpCircle className="w-3.5 h-3.5" />;
+      case 'Trace': return <Radio className="w-3.5 h-3.5" />;
       default: return <HelpCircle className="w-3.5 h-3.5" />;
     }
   };
 
   const getColorClass = (type: string) => {
     switch (type) {
-      case 'GRP_TXT':
-      case 'TXT_MSG': return 'text-emerald-400';
-      case 'ADVERT': return 'text-blue-400';
-      case 'RESPONSE': return 'text-orange-400';
+      case 'GroupText':
+      case 'TextMessage': return 'text-emerald-400';
+      case 'Advert': return 'text-blue-400';
+      case 'Response': return 'text-orange-400';
+      case 'Path': return 'text-purple-400';
+      case 'Request': return 'text-yellow-400';
+      case 'Ack': return 'text-gray-400';
+      case 'Trace': return 'text-indigo-400';
       default: return 'text-slate-400';
     }
   };
 
   // Sort stats for consistent display order
-  const knownTypesOrder = ['GRP_TXT', 'TXT_MSG', 'ADVERT', 'RESPONSE'];
+  const knownTypesOrder = ['GroupText', 'TextMessage', 'Advert', 'Response', 'Path', 'Request', 'Ack', 'Trace'];
   const sortedStats = Object.entries(stats).sort((a, b) => {
      const idxA = knownTypesOrder.indexOf(a[0]);
      const idxB = knownTypesOrder.indexOf(b[0]);
@@ -87,6 +99,7 @@ export const PacketList: React.FC<PacketListProps> = ({ packets, onSelect, selec
 
          {/* Types */}
          {sortedStats.map(([type, count]) => {
+             if (count === 0) return;
              const isSelected = filterType === type;
              const colorClass = getColorClass(type);
              

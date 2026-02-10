@@ -10,12 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "lucide-react": "^0.563.0",
-    "react-dom": "^19.2.4",
-    "react": "^19.2.4",
-    "recharts": "^3.7.0",
+    "@michaelhart/meshcore-decoder": "^0.1.9",
     "date-fns": "^4.1.0",
-    "leaflet": "1.9.4"
+    "leaflet": "1.9.4",
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

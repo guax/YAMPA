@@ -1,5 +1,6 @@
 import { Packet } from '../types';
 import { MOCK_PACKET_DATA } from '../constants';
+import { PacketDecoder, RawPacketData } from './packetDecoder';
 
 type PacketCallback = (packet: Packet) => void;
 type StatusCallback = (status: ConnectionStatus) => void;
@@ -7,7 +8,7 @@ type StatusCallback = (status: ConnectionStatus) => void;
 export type ConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
 
 export class StreamService {
-  private packets: Packet[] = [];
+  private packets: RawPacketData[] = [];
   private callbacks: PacketCallback[] = [];
   private statusCallbacks: StatusCallback[] = [];
   
@@ -30,13 +31,20 @@ export class StreamService {
       .filter((line) => line.trim().length > 0)
       .map((line) => {
         try {
-          return JSON.parse(line);
+          const fullPacket = JSON.parse(line);
+          // Extract only the raw packet data for client-side decoding
+          return {
+            ts: fullPacket.ts,
+            raw_packet: fullPacket.raw_packet,
+            radio: fullPacket.radio,
+            routing: fullPacket.routing,
+          } as RawPacketData;
         } catch (e) {
           console.error("Failed to parse packet line:", line);
           return null;
         }
       })
-      .filter((p): p is Packet => p !== null)
+      .filter((p): p is RawPacketData => p !== null)
       .sort((a, b) => a.ts - b.ts); 
   }
 
@@ -131,8 +139,9 @@ export class StreamService {
         this.ws.onmessage = (event) => {
             if (this.isPaused) return;
             try {
-                const packet: Packet = JSON.parse(event.data);
-                this.emit(packet);
+                const rawData: RawPacketData = JSON.parse(event.data);
+                const decodedPacket = PacketDecoder.decodeRawPacket(rawData);
+                this.emit(decodedPacket);
             } catch (e) {
                 console.error('Failed to parse incoming WS message:', e);
             }
@@ -194,13 +203,16 @@ export class StreamService {
         this.currentIndex = 0; // Loop forever
       }
 
-      const packet = this.packets[this.currentIndex];
+      const rawPacket = this.packets[this.currentIndex];
       
       // We clone the packet and update the timestamp to now 
       // so it feels like a live stream in the UI
-      const livePacket = { ...packet, ts: Date.now() / 1000 };
+      const liveRawPacket = { ...rawPacket, ts: Date.now() / 1000 };
       
-      this.emit(livePacket);
+      // Decode the raw packet using the client-side decoder
+      const decodedPacket = PacketDecoder.decodeRawPacket(liveRawPacket);
+      
+      this.emit(decodedPacket);
       this.currentIndex++;
     }, 1000); 
   }

@@ -53,7 +53,7 @@ const App: React.FC = () => {
       if (nodeInfo && nodeInfo.id) {
         setNodes((prevNodes) => {
           const newMap = new Map(prevNodes);
-          const existing = newMap.get(nodeInfo.id!);
+          const existing: DiscoveredNode | undefined = newMap.get(nodeInfo.id!);
           
           newMap.set(nodeInfo.id!, {
             id: nodeInfo.id!,
@@ -62,9 +62,10 @@ const App: React.FC = () => {
             last_seen: nodeInfo.last_seen!,
             last_rssi: nodeInfo.last_rssi!,
             last_snr: nodeInfo.last_snr!,
-            pub_key: nodeInfo.pub_key || existing?.pub_key,
-            latitude: nodeInfo.latitude || existing?.latitude,
-            longitude: nodeInfo.longitude || existing?.longitude,
+            pub_key: nodeInfo.pub_key || (existing?.pub_key) || '',
+            latitude: nodeInfo.latitude || (existing?.latitude) || undefined,
+            longitude: nodeInfo.longitude || (existing?.longitude) || undefined,
+            is_router: nodeInfo.is_router || (existing?.is_router) || false,
           });
           return newMap;
         });
@@ -135,10 +136,10 @@ const App: React.FC = () => {
   const channels = useMemo(() => {
     const channelMap = new Map<string, ChannelData>();
     packets.forEach(p => {
-      if (p.packet.payload_type_name === 'GRP_TXT' && p.decoded.group_text) {
+      if (p.packet.payload_type_name === 'GroupText' && p.decoded.group_text) {
           const info = p.decoded.group_text;
-          const id = info.channel_name || String(info.channel_hash);
-          const name = info.channel_name || `Unknown (${info.channel_hash})`;
+          const id = info.channel_name;
+          const name = info.channel_name;
           
           if (!channelMap.has(id)) {
               channelMap.set(id, { 
@@ -153,9 +154,7 @@ const App: React.FC = () => {
           const ch = channelMap.get(id)!;
           ch.count++;
           ch.lastActivity = Math.max(ch.lastActivity, p.ts);
-          if (!info.channel_name) {
-              ch.isEncrypted = true;
-          }
+          ch.isEncrypted = !info.decrypted;
       }
     });
     return Array.from(channelMap.values()).sort((a, b) => b.lastActivity - a.lastActivity);
@@ -173,9 +172,9 @@ const App: React.FC = () => {
   const filteredPacketsChannel = useMemo(() => {
      if (!selectedChannelId) return [];
      return packets.filter(p => {
-         if (p.packet.payload_type_name !== 'GRP_TXT' || !p.decoded.group_text) return false;
+         if (p.packet.payload_type_name !== 'GroupText' || !p.decoded.group_text) return false;
          const info = p.decoded.group_text;
-         const id = info.channel_name || String(info.channel_hash);
+         const id = info.channel_name;
          return id === selectedChannelId;
      });
   }, [packets, selectedChannelId]);
