@@ -2,9 +2,9 @@
 
 # YAMPA
 
-![YAMPA packet analyzer](screenshots/main.png)
+YAMPA is Yet Another Meshcore Packet Analyser.
 
-YAMPA is a Meshcore packet visualizer.
+![YAMPA packet analyzer](screenshots/main.png)
 
 This repository contains:
 
