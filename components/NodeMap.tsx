@@ -107,16 +107,6 @@ export const NodeMap: React.FC<NodeMapProps> = ({ nodes, selectedNodeId, onSelec
     }
   }, [selectedNodeId, nodes]);
 
-  // Cleanup
-  useEffect(() => {
-      return () => {
-          if (mapInstanceRef.current) {
-              mapInstanceRef.current.remove();
-              mapInstanceRef.current = null;
-          }
-      }
-  }, []);
-
   return (
     <div className="w-full h-full relative bg-slate-900">
        <div ref={mapContainerRef} className="absolute inset-0 z-0" />
