@@ -110,6 +110,7 @@ export const PacketDetails: React.FC<PacketDetailsProps> = ({ packet, onClose })
                    {packet.decoded.group_text.channel_name && (
                      <div>
                        <span className="text-slate-500">Channel:</span> <span className="text-yellow-400">{packet.decoded.group_text.channel_name}</span>
+                       <span className="text-slate-400 ml-2 font-mono text-xs">(hash: {packet.decoded.group_text.channel_hash.toString(16).toUpperCase()})</span>
                      </div>
                    )}
                    {packet.decoded.group_text.sender_name && (

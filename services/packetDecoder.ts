@@ -23,13 +23,14 @@ export class PacketDecoder {
   // Channel secrets for decryption
   private static readonly CHANNEL_SECRETS = {
     'Public': '8b3387e9c5cdea6ac9e5edbaa115cd72',
-    '#test': '9cd8fcf22a47333b591d96a2b848b73f'
+    '#test': '9cd8fcf22a47333b591d96a2b848b73f',
+    '#purmerend': '32e11330947c9138fdc9d65556c8bd7f'
   };
 
   /**
    * Decode a raw packet using meshcore-decoder
    */
-  public static decodeRawPacket(rawData: RawPacketData): Packet {
+  public static async decodeRawPacket(rawData: RawPacketData): Promise<Packet> {
     const { raw_packet, radio = {}, routing = {}, ts } = rawData;
     
     try {
@@ -68,7 +69,7 @@ export class PacketDecoder {
         payload: {
           hex: decoded.payload.raw,
         },
-        decoded: this.transformDecodedData(decoded),
+        decoded: await this.transformDecodedData(decoded),
       };
     } catch (error) {
       console.error('Failed to decode packet:', error);
@@ -106,7 +107,7 @@ export class PacketDecoder {
   /**
    * Transform decoded data to match our TypeScript interfaces
    */
-  private static transformDecodedData(decoded: any): Decoded {
+  private static async transformDecodedData(decoded: any): Promise<Decoded> {
     const result: Decoded = {};
 
     if (decoded.payload?.decoded) {
@@ -126,7 +127,7 @@ export class PacketDecoder {
       }
 
       if (payload.type === 5) { // GROUP_TEXT
-        const channelName = this.getChannelName(payload.channelHash);
+        const channelName = await this.getChannelName(payload.channelHash);
         const decrypted = !!payload.decrypted;
         
         result.group_text = {
@@ -167,13 +168,40 @@ export class PacketDecoder {
     return (payloadVersion << 6) | (payloadType << 2) | routeType;
   }
 
+  private static async calculateChannelHashFromSecret(hex: string): Promise<string> {
+    if (hex.length % 2 !== 0) {
+      throw new Error('Invalid hex string');
+    }
+
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+    }
+
+    const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+
+    return Array.from(new Uint8Array(hashBuffer.slice(0, 1)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('').toUpperCase();
+  }
+
   /**
    * Get channel name from hash using known channels
    */
-  private static getChannelName(channelHash: string): string | undefined {
+  private static async getChannelName(channelHash: string): Promise<string> {
     if (channelHash === "11") return 'Public';
-    if (channelHash === "D9") return '#test';
+
+    const calculated_hashes = await Promise.all(Object.keys(this.CHANNEL_SECRETS).map(key => {
+      return this.calculateChannelHashFromSecret(this.CHANNEL_SECRETS[key]);
+    }));
+
+    let channelName;
+    calculated_hashes.forEach((hash, index) => {
+      if (hash === channelHash) {
+        channelName = Object.keys(this.CHANNEL_SECRETS)[index];
+      }
+    });
     
-    return 'Unknown';
+    return channelName || ('Unknown ' + channelHash);
   }
 }

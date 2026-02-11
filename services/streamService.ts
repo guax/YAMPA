@@ -140,8 +140,9 @@ export class StreamService {
             if (this.isPaused) return;
             try {
                 const rawData: RawPacketData = JSON.parse(event.data);
-                const decodedPacket = PacketDecoder.decodeRawPacket(rawData);
-                this.emit(decodedPacket);
+                PacketDecoder.decodeRawPacket(rawData).then(decodedPacket => {
+                    this.emit(decodedPacket);
+                });
             } catch (e) {
                 console.error('Failed to parse incoming WS message:', e);
             }
@@ -210,9 +211,9 @@ export class StreamService {
       const liveRawPacket = { ...rawPacket, ts: Date.now() / 1000 };
       
       // Decode the raw packet using the client-side decoder
-      const decodedPacket = PacketDecoder.decodeRawPacket(liveRawPacket);
-      
-      this.emit(decodedPacket);
+      PacketDecoder.decodeRawPacket(liveRawPacket).then(decodedPacket => {
+        this.emit(decodedPacket);
+      });
       this.currentIndex++;
     }, 1000); 
   }
