@@ -23,12 +23,16 @@ export class PacketDecoder {
   // Channel secrets for decryption
   private static CHANNELS: Record<string, {secret: string, hash: string}> = {
     'Public': {secret: '8b3387e9c5cdea6ac9e5edbaa115cd72', hash: '11'},
-    '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'},
-    '#purmerend': {secret: '32e11330947c9138fdc9d65556c8bd7f', hash: 'c8'}
+    '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'}
   };
 
   public static async addHashChannel(channelName: string) {
     const channelSecret = await this.calculateChannelSecretFromName(channelName);
+    const channelHash = await this.calculateChannelHashFromSecret(channelSecret);
+    this.CHANNELS[channelName] = {secret: channelSecret, hash: channelHash};
+  }
+
+  public static async addPrivateChannel(channelName: string, channelSecret: string) {
     const channelHash = await this.calculateChannelHashFromSecret(channelSecret);
     this.CHANNELS[channelName] = {secret: channelSecret, hash: channelHash};
   }
@@ -200,7 +204,7 @@ export class PacketDecoder {
     const encodedChannelName = new TextEncoder().encode(channelName);
     const hashBuffer = await crypto.subtle.digest('SHA-256', encodedChannelName);
 
-    return Array.from(new Uint8Array(hashBuffer.slice(0, 32)))
+    return Array.from(new Uint8Array(hashBuffer.slice(0, 16))) // We only need the first 16 bytes
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
   }
