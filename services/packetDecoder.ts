@@ -21,11 +21,17 @@ export interface RawPacketData {
 
 export class PacketDecoder {
   // Channel secrets for decryption
-  private static readonly CHANNEL_SECRETS = {
-    'Public': '8b3387e9c5cdea6ac9e5edbaa115cd72',
-    '#test': '9cd8fcf22a47333b591d96a2b848b73f',
-    '#purmerend': '32e11330947c9138fdc9d65556c8bd7f'
+  private static CHANNELS: Record<string, {secret: string, hash: string}> = {
+    'Public': {secret: '8b3387e9c5cdea6ac9e5edbaa115cd72', hash: '11'},
+    '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'},
+    '#purmerend': {secret: '32e11330947c9138fdc9d65556c8bd7f', hash: 'c8'}
   };
+
+  public static async addHashChannel(channelName: string) {
+    const channelSecret = await this.calculateChannelSecretFromName(channelName);
+    const channelHash = await this.calculateChannelHashFromSecret(channelSecret);
+    this.CHANNELS[channelName] = {secret: channelSecret, hash: channelHash};
+  }
 
   /**
    * Decode a raw packet using meshcore-decoder
@@ -36,7 +42,7 @@ export class PacketDecoder {
     try {
       // Create key store with channel secrets for decryption
       const keyStore = MeshCorePacketDecoder.createKeyStore({
-        channelSecrets: Object.values(this.CHANNEL_SECRETS)
+        channelSecrets: Object.values(this.CHANNELS).map(c => c.secret)
       });
       
       // Decode the packet using meshcore-decoder with decryption
@@ -127,12 +133,17 @@ export class PacketDecoder {
       }
 
       if (payload.type === 5) { // GROUP_TEXT
-        const channelName = await this.getChannelName(payload.channelHash);
         const decrypted = !!payload.decrypted;
+        let channelName;
+        if (decrypted && payload.channelHash === "11") {
+          channelName = "Public";
+        } else {
+          channelName = await this.getChannelName(payload.channelHash);
+        }
         
         result.group_text = {
           decrypted: decrypted,
-          channel_name: decrypted ? channelName : "Unknown " + payload.channelHash,
+          channel_name: channelName,
           channel_hash: payload.channelHash,
           sender_name: payload.decrypted?.sender,
           text: payload.decrypted?.message,
@@ -182,23 +193,26 @@ export class PacketDecoder {
 
     return Array.from(new Uint8Array(hashBuffer.slice(0, 1)))
       .map(b => b.toString(16).padStart(2, '0'))
-      .join('').toUpperCase();
+      .join('');
+  }
+
+  private static async calculateChannelSecretFromName(channelName: string): Promise<string> {
+    const encodedChannelName = new TextEncoder().encode(channelName);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encodedChannelName);
+
+    return Array.from(new Uint8Array(hashBuffer.slice(0, 32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   /**
    * Get channel name from hash using known channels
    */
   private static async getChannelName(channelHash: string): Promise<string> {
-    if (channelHash === "11") return 'Public';
-
-    const calculated_hashes = await Promise.all(Object.keys(this.CHANNEL_SECRETS).map(key => {
-      return this.calculateChannelHashFromSecret(this.CHANNEL_SECRETS[key]);
-    }));
-
     let channelName;
-    calculated_hashes.forEach((hash, index) => {
-      if (hash === channelHash) {
-        channelName = Object.keys(this.CHANNEL_SECRETS)[index];
+    Object.values(this.CHANNELS).forEach((channel, index) => {
+      if (channel.hash === channelHash.toLowerCase()) {
+        channelName = Object.keys(this.CHANNELS)[index];
       }
     });
     
