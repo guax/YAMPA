@@ -15,28 +15,40 @@ The frontend expects a WebSocket endpoint that streams packet events as JSON.
 
 ## Server (WebSocket packet stream)
 
-The reference server implementation lives at `server-pymc_core/server.py`.
-
-It is intended to run on a supported Linux host with compatible radio hardware (for example, a Raspberry Pi with a supported LoRa chip). **The server and frontend do not need to run on the same machine.**
-
-### WebSocket endpoint
+Both server implementations serve the same WebSocket endpoint. **The server and frontend do not need to run on the same machine.**
 
 - **URL:** `ws://<host>:<port>/ws`
 - **Default:** `ws://localhost:8080/ws`
 
-### Running the server
+### Option A: pyMC_Core Server (`server.py`)
 
-Run it on the machine that has access to the radio hardware:
-
-```bash
-python3 server-pymc_core/server.py --host 0.0.0.0 --port 8080
-```
-
-If your radio requires selecting a type/serial port, pass them explicitly:
+For Linux hosts with a supported LoRa radio directly attached (Waveshare, uConsole, etc.) or a KISS TNC. Decodes packets server-side.
 
 ```bash
-python3 server-pymc_core/server.py --radio-type uconsole --serial-port /dev/ttyUSB0
+python3 server-pymc_core/server.py --radio-type uconsole --host 0.0.0.0 --port 8080
+python3 server-pymc_core/server.py --radio-type kiss-tnc --serial-port /dev/ttyUSB0
 ```
+
+### Option B: MeshCore Companion Bridge (`server_companion.py`)
+
+For devices flashed with **MeshCore USB Serial Companion** firmware (e.g. Heltec ESP32+SX1262). Receives raw packets over USB serial via the `meshcore` Python library and forwards them to the frontend, which decodes them client-side.
+
+1. Flash your device with MeshCore USB Serial Companion firmware from [flasher.meshcore.co.uk](https://flasher.meshcore.co.uk)
+2. Configure the correct frequency and radio settings for your region via the [MeshCore web app](https://meshcore.co.uk) before running the bridge.
+3. Install the meshcore library in the project venv:
+   ```bash
+   pip install meshcore
+   ```
+4. Run the bridge:
+   ```bash
+   python3 server-pymc_core/server_companion.py --serial-port /dev/tty.usbserial-0001
+   ```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--serial-port` | `/dev/ttyUSB0` | Serial port for the companion device |
+| `--host` | `localhost` | WebSocket server bind address |
+| `--port` | `8080` | WebSocket server port |
 
 ## Frontend
 

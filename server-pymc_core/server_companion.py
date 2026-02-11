@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
 
+"""
+MeshCore Companion Bridge — connects to a MeshCore USB Serial Companion device
+and forwards raw radio packets to YAMPA's frontend via WebSocket.
+
+Usage:
+    python3 server_companion.py --serial-port /dev/tty.usbserial-0001
+"""
+
 import argparse
 import asyncio
 import json
 import logging
+import time
 from typing import Set
 
 import websockets
 from websockets.server import WebSocketServerProtocol
 
-from packet_analyser_common import build_packet_json, create_analyser_node
-
+from meshcore import MeshCore, EventType
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger("packet_analyser_server")
+logger = logging.getLogger("companion_bridge")
 
 
-async def run_server(radio_type: str, serial_port: str, host: str, port: int):
-    node = create_analyser_node(
-        radio_type=radio_type,
-        serial_port=serial_port,
-        node_name="PacketAnalyserServer",
-    )
-
+async def run_server(serial_port: str, host: str, port: int):
     clients: Set[WebSocketServerProtocol] = set()
 
     async def broadcast(packet_json: dict):
@@ -45,10 +47,27 @@ async def run_server(radio_type: str, serial_port: str, host: str, port: int):
         for ws in to_remove:
             clients.discard(ws)
 
-    async def on_packet(pkt):
-        await broadcast(build_packet_json(pkt))
+    async def on_rx_log_data(event):
+        payload = event.payload
+        packet_json = {
+            "ts": time.time(),
+            "raw_packet": {"hex": payload.get("payload", "")},
+            "radio": {
+                "rssi": payload["rssi"],
+                "snr": payload["snr"],
+            },
+        }
+        logger.info(
+            f"RX packet: {len(payload['raw_hex']) // 2} bytes, "
+            f"RSSI={payload['rssi']}, SNR={payload['snr']}"
+        )
+        await broadcast(packet_json)
 
-    node.dispatcher.set_packet_received_callback(on_packet)
+    logger.info(f"Connecting to MeshCore companion on {serial_port}...")
+    mc = await MeshCore.create_serial(port=serial_port)
+    logger.info("MeshCore companion connected")
+
+    mc.subscribe(EventType.RX_LOG_DATA, on_rx_log_data)
 
     async def ws_handler(ws: WebSocketServerProtocol):
         peer = getattr(ws, "remote_address", None)
@@ -56,14 +75,15 @@ async def run_server(radio_type: str, serial_port: str, host: str, port: int):
         logger.info(f"WS client connected: {peer} (clients={len(clients)})")
         try:
             async for _message in ws:
-                # Client doesn't need to send anything; ignore messages.
                 pass
         finally:
             clients.discard(ws)
             logger.info(f"WS client disconnected: {peer} (clients={len(clients)})")
 
     async def ws_router(ws: WebSocketServerProtocol):
-        path = getattr(ws, "path", None) or getattr(getattr(ws, "request", None), "path", None)
+        path = getattr(ws, "path", None) or getattr(
+            getattr(ws, "request", None), "path", None
+        )
         if path != "/ws":
             peer = getattr(ws, "remote_address", None)
             logger.warning(f"WS rejected client {peer} with invalid path: {path}")
@@ -76,27 +96,23 @@ async def run_server(radio_type: str, serial_port: str, host: str, port: int):
     logger.info("WebSocket server started")
 
     try:
-        await node.start()
+        while mc.is_connected:
+            await asyncio.sleep(1)
     finally:
-        logger.info("Shutting down WebSocket server")
+        logger.info("Shutting down...")
         ws_server.close()
         await ws_server.wait_closed()
+        await mc.disconnect()
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="WebSocket server for Meshcore Packet Visualizer (ws://localhost:8080/ws)"
-    )
-    parser.add_argument(
-        "--radio-type",
-        choices=["waveshare", "uconsole", "meshadv-mini", "kiss-tnc"],
-        default="uconsole",
-        help="Radio hardware type (default: uconsole)",
+        description="MeshCore Companion Bridge — forwards raw radio packets to YAMPA via WebSocket"
     )
     parser.add_argument(
         "--serial-port",
         default="/dev/ttyUSB0",
-        help="Serial port for KISS TNC (default: /dev/ttyUSB0)",
+        help="Serial port for MeshCore companion device (default: /dev/ttyUSB0)",
     )
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8080)
@@ -104,7 +120,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        asyncio.run(run_server(args.radio_type, args.serial_port, args.host, args.port))
+        asyncio.run(run_server(args.serial_port, args.host, args.port))
     except KeyboardInterrupt:
         pass
 
