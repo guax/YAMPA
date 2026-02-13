@@ -225,7 +225,7 @@ const App: React.FC = () => {
                 className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'analyzer' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
              >
                 <Activity className="w-4 h-4" />
-                Analyzer
+                Packets
              </button>
              <button 
                 onClick={() => setViewMode('channels')}
