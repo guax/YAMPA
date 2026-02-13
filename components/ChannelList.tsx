@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Hash, Lock, Clock, Plus, X } from 'lucide-react';
+import { Hash, Lock, Clock, Pencil, X, Trash2, Copy } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { PacketDecoder } from '../services/packetDecoder';
@@ -25,6 +25,16 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
   const [secretKey, setSecretKey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [registeredChannelsRefresh, setRegisteredChannelsRefresh] = useState(0);
+
+  const registeredChannels = useMemo(() => {
+    void registeredChannelsRefresh;
+    return PacketDecoder.getRegisteredChannels().sort((a, b) => {
+      if (a.name === 'Public' && b.name !== 'Public') return -1;
+      if (b.name === 'Public' && a.name !== 'Public') return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [registeredChannelsRefresh]);
 
   const canSubmit = useMemo(() => {
     const nameOk = channelName.trim().length > 0;
@@ -48,6 +58,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
     setError(null);
   };
 
+  const onRemoveRegisteredChannel = (name: string) => {
+    PacketDecoder.removeChannel(name);
+    setRegisteredChannelsRefresh((v) => v + 1);
+  };
+
   const onSubmitRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit || isSubmitting) return;
@@ -64,7 +79,11 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
         await PacketDecoder.addPrivateChannel(name, secretKey.trim());
       }
 
-      closeRegister();
+      setRegisteredChannelsRefresh((v) => v + 1);
+      setChannelName('');
+      setSecretKey('');
+      setChannelType('public');
+      setIsSubmitting(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register channel');
       setIsSubmitting(false);
@@ -79,11 +98,10 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
           <button
             type="button"
             onClick={() => setIsRegisterOpen(true)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors"
-            title="Register Channel"
+            className="p-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors"
+            title="Manage channels"
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-xs font-medium">Register</span>
+            <Pencil className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -133,9 +151,9 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
       {isRegisterOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={closeRegister} />
-          <div className="relative w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 shadow-xl">
+          <div className="relative w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 shadow-xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-              <div className="text-sm font-semibold text-slate-200">Register Channel</div>
+              <div className="text-sm font-semibold text-slate-200">Manage Channels</div>
               <button
                 type="button"
                 onClick={closeRegister}
@@ -146,7 +164,54 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
               </button>
             </div>
 
-            <form onSubmit={onSubmitRegister} className="p-4 space-y-4">
+            <div className="p-4 space-y-4">
+              <div>
+                <div className="text-xs font-medium text-slate-400 mb-2">Registered channels</div>
+                {registeredChannels.length === 0 ? (
+                  <div className="text-xs text-slate-600 bg-slate-800/40 border border-slate-800 rounded-md px-3 py-3">
+                    No registered channels.
+                  </div>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto rounded-md border border-slate-800 divide-y divide-slate-800">
+                    {registeredChannels.map((ch) => (
+                      <div key={ch.name} className="flex items-center justify-between gap-3 px-3 py-2 bg-slate-900">
+                        <div className="min-w-0">
+                          <div className="text-sm text-slate-200 truncate">{ch.name}</div>
+                          <div className="text-[10px] text-slate-500 truncate">hash: {ch.hash}</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(ch.secret);
+                            }}
+                            className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                            title="Copy secret key"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          {ch.name === 'Public' ? (
+                            <div className="text-[10px] text-slate-500 px-2">Default</div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveRegisteredChannel(ch.name)}
+                              className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-red-300 transition-colors"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-800 pt-4">
+                <div className="text-xs font-medium text-slate-400 mb-2">Add channel</div>
+                <form onSubmit={onSubmitRegister} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Type</label>
                 <select
@@ -204,7 +269,9 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
                   {isSubmitting ? 'Registering…' : 'Register'}
                 </button>
               </div>
-            </form>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       )}
