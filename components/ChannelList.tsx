@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Hash, Lock, Clock, Pencil, X, Trash2 } from 'lucide-react';
+import { Hash, Lock, Clock, Pencil, X, Trash2, Copy } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { PacketDecoder } from '../services/packetDecoder';
@@ -179,18 +179,30 @@ export const ChannelList: React.FC<ChannelListProps> = ({ channels, selectedChan
                           <div className="text-sm text-slate-200 truncate">{ch.name}</div>
                           <div className="text-[10px] text-slate-500 truncate">hash: {ch.hash}</div>
                         </div>
-                        {ch.name === 'Public' ? (
-                          <div className="text-[10px] text-slate-500">Default</div>
-                        ) : (
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => onRemoveRegisteredChannel(ch.name)}
-                            className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-red-300 transition-colors"
-                            title="Remove"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(ch.secret);
+                            }}
+                            className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                            title="Copy secret key"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Copy className="w-4 h-4" />
                           </button>
-                        )}
+                          {ch.name === 'Public' ? (
+                            <div className="text-[10px] text-slate-500 px-2">Default</div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveRegisteredChannel(ch.name)}
+                              className="p-2 rounded-md hover:bg-slate-800 text-slate-400 hover:text-red-300 transition-colors"
+                              title="Remove"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

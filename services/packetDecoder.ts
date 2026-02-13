@@ -30,6 +30,10 @@ export class PacketDecoder {
     return Object.entries(this.CHANNELS).map(([name, v]) => ({ name, secret: v.secret, hash: v.hash }));
   }
 
+  public static getChannelSecret(channelName: string): string | null {
+    return this.CHANNELS[channelName]?.secret ?? null;
+  }
+
   public static removeChannel(channelName: string) {
     if (channelName === 'Public') return;
     delete this.CHANNELS[channelName];
