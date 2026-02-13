@@ -26,6 +26,15 @@ export class PacketDecoder {
     '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'}
   };
 
+  public static getRegisteredChannels(): Array<{name: string; secret: string; hash: string}> {
+    return Object.entries(this.CHANNELS).map(([name, v]) => ({ name, secret: v.secret, hash: v.hash }));
+  }
+
+  public static removeChannel(channelName: string) {
+    if (channelName === 'Public') return;
+    delete this.CHANNELS[channelName];
+  }
+
   public static async addHashChannel(channelName: string) {
     const channelSecret = await this.calculateChannelSecretFromName(channelName);
     const channelHash = await this.calculateChannelHashFromSecret(channelSecret);

@@ -17,7 +17,7 @@ export class StreamService {
   private isPaused: boolean = false;
   
   private ws: WebSocket | null = null;
-  private wsUrl: string = 'ws://localhost:8080/ws';
+  private wsUrl: string = 'ws://192.168.178.93:8080/ws';
   private isSimulationMode: boolean = false;
   private reconnectTimeoutId: number | null = null;
 
