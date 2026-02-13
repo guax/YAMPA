@@ -21,10 +21,33 @@ export interface RawPacketData {
 
 export class PacketDecoder {
   // Channel secrets for decryption
-  private static CHANNELS: Record<string, {secret: string, hash: string}> = {
-    'Public': {secret: '8b3387e9c5cdea6ac9e5edbaa115cd72', hash: '11'},
-    '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'}
-  };
+  private static CHANNELS: Record<string, {secret: string, hash: string}> = this.loadChannels();
+
+  private static loadChannels(): Record<string, {secret: string, hash: string}> {
+    try {
+      const stored = localStorage.getItem('meshcore_channels');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load channels from localStorage:', e);
+    }
+    return {
+      'Public': {secret: '8b3387e9c5cdea6ac9e5edbaa115cd72', hash: '11'},
+      '#test': {secret: '9cd8fcf22a47333b591d96a2b848b73f', hash: 'd9'}
+    };
+  }
+
+  private static saveChannels() {
+    try {
+      localStorage.setItem('meshcore_channels', JSON.stringify(this.CHANNELS));
+    } catch (e) {
+      console.warn('Failed to save channels to localStorage:', e);
+    }
+  }
 
   public static getRegisteredChannels(): Array<{name: string; secret: string; hash: string}> {
     return Object.entries(this.CHANNELS).map(([name, v]) => ({ name, secret: v.secret, hash: v.hash }));
@@ -37,17 +60,20 @@ export class PacketDecoder {
   public static removeChannel(channelName: string) {
     if (channelName === 'Public') return;
     delete this.CHANNELS[channelName];
+    this.saveChannels();
   }
 
   public static async addHashChannel(channelName: string) {
     const channelSecret = await this.calculateChannelSecretFromName(channelName);
     const channelHash = await this.calculateChannelHashFromSecret(channelSecret);
     this.CHANNELS[channelName] = {secret: channelSecret, hash: channelHash};
+    this.saveChannels();
   }
 
   public static async addPrivateChannel(channelName: string, channelSecret: string) {
     const channelHash = await this.calculateChannelHashFromSecret(channelSecret);
     this.CHANNELS[channelName] = {secret: channelSecret, hash: channelHash};
+    this.saveChannels();
   }
 
   /**
