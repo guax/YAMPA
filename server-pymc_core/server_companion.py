@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 
 """
-MeshCore Companion Bridge — connects to a MeshCore USB Serial Companion device
+MeshCore Companion Bridge — connects to a MeshCore Companion device
 and forwards raw radio packets to YAMPA's frontend via WebSocket.
 
 Usage:
+    # Serial (default)
     python3 server_companion.py --serial-port /dev/tty.usbserial-0001
+
+    # TCP
+    python3 server_companion.py --connect tcp --tcp-host 192.168.1.100 --tcp-port 5000
+
+    # BLE
+    python3 server_companion.py --connect ble --ble-address 12:34:56:78:90:AB
 """
 
 import argparse
@@ -26,7 +33,22 @@ logging.basicConfig(
 logger = logging.getLogger("companion_bridge")
 
 
-async def run_server(serial_port: str, host: str, port: int):
+async def create_meshcore(args) -> MeshCore:
+    """Create a MeshCore connection based on the selected transport."""
+    if args.connect == "serial":
+        logger.info(f"Connecting to MeshCore companion via serial on {args.serial_port}...")
+        return await MeshCore.create_serial(port=args.serial_port)
+    elif args.connect == "tcp":
+        logger.info(f"Connecting to MeshCore companion via TCP on {args.tcp_host}:{args.tcp_port}...")
+        return await MeshCore.create_tcp(args.tcp_host, args.tcp_port)
+    elif args.connect == "ble":
+        logger.info(f"Connecting to MeshCore companion via BLE ({args.ble_address or 'scan'})...")
+        return await MeshCore.create_ble(args.ble_address, pin=args.ble_pin)
+    else:
+        raise ValueError(f"Unknown connection type: {args.connect}")
+
+
+async def run_server(args, host: str, port: int):
     clients: Set[WebSocketServerProtocol] = set()
 
     async def broadcast(packet_json: dict):
@@ -63,8 +85,7 @@ async def run_server(serial_port: str, host: str, port: int):
         )
         await broadcast(packet_json)
 
-    logger.info(f"Connecting to MeshCore companion on {serial_port}...")
-    mc = await MeshCore.create_serial(port=serial_port)
+    mc = await create_meshcore(args)
     logger.info("MeshCore companion connected")
 
     mc.subscribe(EventType.RX_LOG_DATA, on_rx_log_data)
@@ -110,17 +131,48 @@ def main():
         description="MeshCore Companion Bridge — forwards raw radio packets to YAMPA via WebSocket"
     )
     parser.add_argument(
+        "--connect",
+        choices=["serial", "tcp", "ble"],
+        default="serial",
+        help="Connection type to MeshCore companion (default: serial)",
+    )
+    # Serial options
+    parser.add_argument(
         "--serial-port",
         default="/dev/ttyUSB0",
         help="Serial port for MeshCore companion device (default: /dev/ttyUSB0)",
     )
+    # TCP options
+    parser.add_argument(
+        "--tcp-host",
+        default="192.168.1.100",
+        help="TCP host of the MeshCore companion (default: 192.168.1.100)",
+    )
+    parser.add_argument(
+        "--tcp-port",
+        type=int,
+        default=5000,
+        help="TCP port of the MeshCore companion (default: 5000)",
+    )
+    # BLE options
+    parser.add_argument(
+        "--ble-address",
+        default=None,
+        help="BLE address of the MeshCore companion (scans if not provided)",
+    )
+    parser.add_argument(
+        "--ble-pin",
+        default=None,
+        help="BLE PIN for pairing (optional)",
+    )
+    # WebSocket server options
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=8080)
 
     args = parser.parse_args()
 
     try:
-        asyncio.run(run_server(args.serial_port, args.host, args.port))
+        asyncio.run(run_server(args, args.host, args.port))
     except KeyboardInterrupt:
         pass
 
