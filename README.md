@@ -31,9 +31,9 @@ python3 server-pymc_core/server.py --radio-type kiss-tnc --serial-port /dev/ttyU
 
 ### Option B: MeshCore Companion Bridge (`server_companion.py`)
 
-For devices flashed with **MeshCore USB Serial Companion** firmware (e.g. Heltec ESP32+SX1262). Receives raw packets over USB serial via the `meshcore` Python library and forwards them to the frontend, which decodes them client-side.
+For devices flashed with **MeshCore Companion** firmware (e.g. Heltec ESP32+SX1262). Receives raw packets via the `meshcore` Python library and forwards them to the frontend, which decodes them client-side. Supports **Serial**, **TCP**, and **BLE** connections.
 
-1. Flash your device with MeshCore USB Serial Companion firmware from [flasher.meshcore.co.uk](https://flasher.meshcore.co.uk)
+1. Flash your device with MeshCore Companion firmware from [flasher.meshcore.co.uk](https://flasher.meshcore.co.uk)
 2. Configure the correct frequency and radio settings for your region via the [MeshCore web app](https://meshcore.co.uk) before running the bridge.
 3. Install the meshcore library in the project venv:
    ```bash
@@ -41,12 +41,24 @@ For devices flashed with **MeshCore USB Serial Companion** firmware (e.g. Heltec
    ```
 4. Run the bridge:
    ```bash
+   # Serial (default)
    python3 server-pymc_core/server_companion.py --serial-port /dev/tty.usbserial-0001
+
+   # TCP
+   python3 server-pymc_core/server_companion.py --connect tcp --tcp-host 192.168.1.100 --tcp-port 5000
+
+   # BLE
+   python3 server-pymc_core/server_companion.py --connect ble --ble-address 12:34:56:78:90:AB
    ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--connect` | `serial` | Connection type: `serial`, `tcp`, or `ble` |
 | `--serial-port` | `/dev/ttyUSB0` | Serial port for the companion device |
+| `--tcp-host` | `192.168.1.100` | TCP host of the companion device |
+| `--tcp-port` | `5000` | TCP port of the companion device |
+| `--ble-address` | *(scan)* | BLE address of the companion (scans if omitted) |
+| `--ble-pin` | *(none)* | BLE PIN for pairing (optional) |
 | `--host` | `localhost` | WebSocket server bind address |
 | `--port` | `8080` | WebSocket server port |
 
